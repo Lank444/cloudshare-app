@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>CloudShare - Simple Cloud Storage</title>
+  <title>CloudShare - Cloud Storage Sharing</title>
   <style>
     * {
       margin: 0;
@@ -302,6 +302,13 @@
       flex-shrink: 0;
     }
     
+    .file-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 12px;
+    }
+    
     .file-info {
       flex: 1;
       min-width: 0;
@@ -399,7 +406,6 @@
       padding: 10px;
     }
     
-    /* Loading Spinner */
     .spinner {
       width: 40px;
       height: 40px;
@@ -433,6 +439,15 @@
       background: linear-gradient(90deg, #6c63ff, #3ecfcf);
       transition: width 0.3s;
     }
+    
+    .connection-status {
+      text-align: center;
+      font-size: 11px;
+      margin-bottom: 12px;
+      padding: 8px;
+      border-radius: 8px;
+      background: #1a1a2622;
+    }
   </style>
 </head>
 <body>
@@ -442,11 +457,10 @@
     <div class="login-card">
       <div class="login-icon">☁️</div>
       <h1 class="login-title">CloudShare</h1>
-      <p class="login-sub">Simpan & bagikan file dengan mudah</p>
+      <p class="login-sub">Simpan & bagikan file di cloud</p>
       <input id="login-input" type="text" placeholder="Masukkan nama kamu..." class="login-input" autocomplete="off">
       <button id="login-btn" class="login-btn">Masuk →</button>
-      <p class="login-warning">📱 File tersimpan di browser Anda</p>
-      <p class="login-warning" style="margin-top: 4px;">👥 Bisa diakses semua pengguna di perangkat ini</p>
+      <p class="login-warning">🌐 File tersimpan di cloud & bisa diakses semua user</p>
     </div>
   </div>
 
@@ -456,7 +470,7 @@
       <div class="header-left">
         <div class="header-logo">☁️</div>
         <span class="header-title">CloudShare</span>
-        <span class="badge-shared">SHARED</span>
+        <span class="badge-shared">CLOUD SYNC</span>
       </div>
       <div style="display: flex; align-items: center; gap: 10px;">
         <div id="user-avatar" class="user-avatar"></div>
@@ -485,12 +499,17 @@
         </div>
       </div>
 
+      <!-- Connection Status -->
+      <div id="connection-status" class="connection-status">
+        <span id="status-text">🔄 Menghubungkan ke cloud...</span>
+      </div>
+
       <!-- Upload Zone -->
       <div id="drop-zone" class="drop-zone">
         <div id="upload-idle">
           <div class="upload-icon">📤</div>
           <p class="upload-title">Klik untuk upload file</p>
-          <p class="upload-sub">Foto, PDF, Dokumen, dll. (Max 10MB)</p>
+          <p class="upload-sub">Foto, PDF, Dokumen, dll. (Max 5MB)</p>
         </div>
         <div id="upload-progress" class="upload-progress hidden">
           <div class="spinner"></div>
@@ -505,7 +524,7 @@
       <!-- Search -->
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input id="search-input" type="text" placeholder="Cari file..." class="search-input">
+        <input id="search-input" type="text" placeholder="Cari file atau nama user..." class="search-input">
         <button id="search-clear" class="search-clear hidden">✕</button>
       </div>
 
@@ -519,19 +538,28 @@
         <p class="empty-sub" style="font-size: 12px; color: #666;">Upload file pertamamu!</p>
       </div>
 
-      <p class="refresh-info">💾 File tersimpan di browser — buka dari perangkat lain untuk melihat file yang sama</p>
+      <p class="refresh-info">🌐 File tersimpan di cloud — semua user bisa melihat</p>
     </main>
   </div>
 
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <script>
-    // ==================== CLOUDSHARE - SIMPLE VERSION ====================
+    // ========== KONFIGURASI SUPABASE ==========
+    // GANTI DENGAN CREDENTIAL ANDA!
+    const SUPABASE_URL = "https://ccivfvgxpzcjlpoozrwf.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjaXZmdmd4cHpjamxwb296cndmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MTI3NTAsImV4cCI6MjA5MjQ4ODc1MH0.aSFzrn9dCLlstV2RqrS3DkEBjIYVbe71y4G90DT5RUU";  // <-- GANTI INI!
     
-    const STORAGE_KEY = "cloudshare_all_files";
+    // Inisialisasi Supabase
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
     let currentUser = "";
     let allFiles = [];
+    let syncInterval = null;
     
     // DOM Elements
     const loginScreen = document.getElementById("login-screen");
@@ -555,6 +583,7 @@
     const fileList = document.getElementById("file-list");
     const emptyState = document.getElementById("empty-state");
     const toast = document.getElementById("toast");
+    const statusText = document.getElementById("status-text");
     
     // Helper Functions
     function showToast(msg, isError = false) {
@@ -583,14 +612,12 @@
     }
     
     function getFileIcon(type) {
-      if (type.startsWith("image/")) return "🖼️";
-      if (type.startsWith("video/")) return "🎬";
-      if (type.startsWith("audio/")) return "🎵";
-      if (type.includes("pdf")) return "📄";
-      if (type.includes("zip") || type.includes("rar")) return "🗜️";
-      if (type.includes("text")) return "📝";
-      if (type.includes("sheet") || type.includes("excel")) return "📊";
-      if (type.includes("word") || type.includes("document")) return "📃";
+      if (type && type.startsWith("image/")) return "🖼️";
+      if (type && type.startsWith("video/")) return "🎬";
+      if (type && type.startsWith("audio/")) return "🎵";
+      if (type && type.includes("pdf")) return "📄";
+      if (type && type.includes("zip")) return "🗜️";
+      if (type && type.includes("text")) return "📝";
       return "📁";
     }
     
@@ -604,39 +631,112 @@
       });
     }
     
-    // Storage Functions
-    function saveFilesToStorage() {
+    function updateConnectionStatus(text, isError = false) {
+      if (statusText) {
+        statusText.innerHTML = text;
+        const container = document.getElementById("connection-status");
+        if (container) {
+          if (isError) {
+            container.style.background = "#ff446622";
+            container.style.border = "1px solid #ff4466";
+          } else {
+            container.style.background = "#6c63ff22";
+            container.style.border = "1px solid #6c63ff44";
+          }
+        }
+      }
+    }
+    
+    // Load files from Supabase
+    async function loadFilesFromCloud() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(allFiles));
+        updateConnectionStatus("🔄 Mengambil data dari cloud...");
+        
+        const { data, error } = await supabase
+          .from('files')
+          .select('*')
+          .order('uploaded_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        allFiles = data || [];
+        renderFiles();
+        updateStats();
+        
+        updateConnectionStatus(`✅ Terhubung — ${allFiles.length} file di cloud`);
         return true;
-      } catch (e) {
-        console.error("Gagal save:", e);
+      } catch (error) {
+        console.error("Gagal load files:", error);
+        updateConnectionStatus("⚠️ Gagal koneksi ke cloud - pastikan anon key benar", true);
+        showToast("Gagal mengambil data dari cloud!", true);
         return false;
       }
     }
     
-    function loadFilesFromStorage() {
+    // Upload file to Supabase
+    async function uploadFileToCloud(file) {
       try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          allFiles = JSON.parse(stored);
-        } else {
-          allFiles = [];
-        }
-        renderFiles();
-        updateStats();
-      } catch (e) {
-        console.error("Gagal load:", e);
-        allFiles = [];
+        const dataUrl = await readAsDataURL(file);
+        
+        const fileData = {
+          id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: file.name,
+          size: file.size,
+          type: file.type || "application/octet-stream",
+          uploaded_by: currentUser,
+          uploaded_at: new Date().toISOString(),
+          data_url: dataUrl
+        };
+        
+        const { error } = await supabase
+          .from('files')
+          .insert([fileData]);
+        
+        if (error) throw error;
+        
+        await loadFilesFromCloud();
+        return true;
+      } catch (error) {
+        console.error("Upload error:", error);
+        showToast(`Gagal upload ${file.name}: ${error.message}`, true);
+        return false;
       }
     }
     
-    // Update Statistics
+    // Delete file from Supabase
+    async function deleteFileFromCloud(fileId) {
+      try {
+        const { error } = await supabase
+          .from('files')
+          .delete()
+          .eq('id', fileId);
+        
+        if (error) throw error;
+        
+        await loadFilesFromCloud();
+        return true;
+      } catch (error) {
+        console.error("Delete error:", error);
+        showToast("Gagal menghapus file!", true);
+        return false;
+      }
+    }
+    
+    function readAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = () => reject(new Error("Gagal membaca file"));
+        reader.readAsDataURL(file);
+      });
+    }
+    
+    // Update Stats
     function updateStats() {
       if (statTotal) statTotal.textContent = allFiles.length;
       if (statSize) statSize.textContent = formatSize(allFiles.reduce((a, f) => a + (f.size || 0), 0));
       if (statUsers) {
-        const uniqueUsers = new Set(allFiles.map(f => f.uploadedBy).filter(Boolean));
+        const uniqueUsers = new Set(allFiles.map(f => f.uploaded_by).filter(Boolean));
         statUsers.textContent = uniqueUsers.size;
       }
     }
@@ -648,7 +748,7 @@
       const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
       const filtered = query ? allFiles.filter(f => 
         (f.name || "").toLowerCase().includes(query) || 
-        (f.uploadedBy || "").toLowerCase().includes(query)
+        (f.uploaded_by || "").toLowerCase().includes(query)
       ) : allFiles;
       
       fileList.innerHTML = "";
@@ -667,26 +767,22 @@
         // Thumbnail
         const thumb = document.createElement("div");
         thumb.className = "file-thumb";
-        if (file.type && file.type.startsWith("image/") && file.dataUrl) {
+        if (file.type && file.type.startsWith("image/") && file.data_url) {
           const img = document.createElement("img");
-          img.src = file.dataUrl;
-          img.style.width = "100%";
-          img.style.height = "100%";
-          img.style.objectFit = "cover";
-          img.style.borderRadius = "10px";
+          img.src = file.data_url;
           thumb.appendChild(img);
         } else {
-          thumb.textContent = getFileIcon(file.type || "");
+          thumb.textContent = getFileIcon(file.type);
         }
         
         // Info
         const info = document.createElement("div");
         info.className = "file-info";
         info.innerHTML = `
-          <div class="file-name">${escapeHtml(file.name || "Unknown")}</div>
+          <div class="file-name">${escapeHtml(file.name)}</div>
           <div class="file-meta">
-            <span class="uploader">${escapeHtml(file.uploadedBy || "Unknown")}</span>
-            &nbsp;·&nbsp;${formatSize(file.size || 0)}&nbsp;·&nbsp;${formatDate(file.uploadedAt)}
+            <span class="uploader">${escapeHtml(file.uploaded_by)}</span>
+            &nbsp;·&nbsp;${formatSize(file.size)}&nbsp;·&nbsp;${formatDate(file.uploaded_at)}
           </div>
         `;
         
@@ -694,13 +790,12 @@
         const actions = document.createElement("div");
         actions.className = "file-actions";
         
-        // Preview button for images
-        if (file.type && file.type.startsWith("image/") && file.dataUrl) {
+        // Preview for images
+        if (file.type && file.type.startsWith("image/") && file.data_url) {
           const previewBtn = document.createElement("button");
           previewBtn.className = "action-btn";
           previewBtn.textContent = "👁️";
-          previewBtn.title = "Preview";
-          previewBtn.onclick = () => openPreview(file);
+          previewBtn.onclick = () => openPreview(file.data_url, file.name);
           actions.appendChild(previewBtn);
         }
         
@@ -708,17 +803,19 @@
         const dlBtn = document.createElement("button");
         dlBtn.className = "action-btn";
         dlBtn.textContent = "⬇️";
-        dlBtn.title = "Download";
         dlBtn.onclick = () => downloadFile(file);
         actions.appendChild(dlBtn);
         
         // Delete button (only for uploader)
-        if (file.uploadedBy === currentUser) {
+        if (file.uploaded_by === currentUser) {
           const delBtn = document.createElement("button");
           delBtn.className = "action-btn danger";
           delBtn.textContent = "🗑️";
-          delBtn.title = "Hapus";
-          delBtn.onclick = () => deleteFile(file.id);
+          delBtn.onclick = () => {
+            if (confirm("Hapus file ini?")) {
+              deleteFileFromCloud(file.id);
+            }
+          };
           actions.appendChild(delBtn);
         }
         
@@ -729,13 +826,7 @@
       });
     }
     
-    // Preview Image
-    function openPreview(file) {
-      if (!file.dataUrl) {
-        showToast("Preview tidak tersedia", true);
-        return;
-      }
-      
+    function openPreview(dataUrl, name) {
       const modal = document.createElement("div");
       modal.style.position = "fixed";
       modal.style.top = "0";
@@ -751,7 +842,7 @@
       modal.style.padding = "20px";
       
       const img = document.createElement("img");
-      img.src = file.dataUrl;
+      img.src = dataUrl;
       img.style.maxWidth = "95%";
       img.style.maxHeight = "80%";
       img.style.borderRadius = "12px";
@@ -773,38 +864,16 @@
       document.body.appendChild(modal);
     }
     
-    // Download File
     function downloadFile(file) {
-      if (!file.dataUrl) {
+      if (!file.data_url) {
         showToast("File tidak tersedia", true);
         return;
       }
       const a = document.createElement("a");
-      a.href = file.dataUrl;
+      a.href = file.data_url;
       a.download = file.name;
       a.click();
       showToast(`Mengunduh ${file.name}`);
-    }
-    
-    // Delete File
-    function deleteFile(fileId) {
-      if (confirm("Hapus file ini?")) {
-        allFiles = allFiles.filter(f => f.id !== fileId);
-        saveFilesToStorage();
-        renderFiles();
-        updateStats();
-        showToast("File dihapus", true);
-      }
-    }
-    
-    // Read file as DataURL
-    function readAsDataURL(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result);
-        reader.onerror = () => reject(new Error("Gagal membaca file"));
-        reader.readAsDataURL(file);
-      });
     }
     
     // Upload Handler
@@ -813,10 +882,10 @@
       
       const fileArray = Array.from(files);
       
-      // Filter file terlalu besar
+      // Filter file terlalu besar (max 5MB untuk database)
       const validFiles = fileArray.filter(f => {
-        if (f.size > 10 * 1024 * 1024) {
-          showToast(`${f.name} terlalu besar (max 10MB)`, true);
+        if (f.size > 5 * 1024 * 1024) {
+          showToast(`${f.name} terlalu besar (max 5MB)`, true);
           return false;
         }
         return true;
@@ -835,31 +904,9 @@
         if (uploadLabel) uploadLabel.textContent = `Mengupload ${file.name}... ${pct}%`;
         if (progressBar) progressBar.style.width = pct + "%";
         
-        try {
-          const dataUrl = await readAsDataURL(file);
-          
-          const newFile = {
-            id: Date.now() + Math.random(),
-            name: file.name,
-            size: file.size,
-            type: file.type || "application/octet-stream",
-            uploadedBy: currentUser,
-            uploadedAt: new Date().toISOString(),
-            dataUrl: dataUrl
-          };
-          
-          allFiles.unshift(newFile);
-          successCount++;
-        } catch (error) {
-          console.error("Upload error:", error);
-          showToast(`Gagal upload ${file.name}`, true);
-        }
+        const success = await uploadFileToCloud(file);
+        if (success) successCount++;
       }
-      
-      // Save to storage
-      saveFilesToStorage();
-      renderFiles();
-      updateStats();
       
       // Hide progress UI
       if (uploadIdle) uploadIdle.classList.remove("hidden");
@@ -867,14 +914,14 @@
       if (progressBar) progressBar.style.width = "0%";
       
       if (successCount > 0) {
-        showToast(`${successCount} file berhasil diupload!`);
+        showToast(`${successCount} file berhasil diupload ke cloud!`);
       }
       
       if (fileInput) fileInput.value = "";
     }
     
     // Login
-    function login() {
+    async function login() {
       const name = loginInput.value.trim();
       if (!name) {
         showToast("Masukkan nama dulu!", true);
@@ -882,7 +929,7 @@
       }
       
       currentUser = name;
-      localStorage.setItem("cloudshare_current_user", currentUser);
+      localStorage.setItem("cloudshare_user", currentUser);
       
       loginScreen.classList.add("hidden");
       app.classList.remove("hidden");
@@ -890,28 +937,37 @@
       if (userAvatar) userAvatar.textContent = name[0].toUpperCase();
       if (userNameSpan) userNameSpan.textContent = name;
       
-      loadFilesFromStorage();
+      await loadFilesFromCloud();
+      
+      // Auto sync every 5 seconds
+      if (syncInterval) clearInterval(syncInterval);
+      syncInterval = setInterval(loadFilesFromCloud, 5000);
     }
     
     // Logout
     function logout() {
+      if (syncInterval) {
+        clearInterval(syncInterval);
+        syncInterval = null;
+      }
       currentUser = "";
-      localStorage.removeItem("cloudshare_current_user");
+      localStorage.removeItem("cloudshare_user");
       app.classList.add("hidden");
       loginScreen.classList.remove("hidden");
       if (loginInput) loginInput.value = "";
     }
     
-    // Check saved user on load
-    function checkSavedUser() {
-      const savedUser = localStorage.getItem("cloudshare_current_user");
+    // Check saved user
+    async function checkSavedUser() {
+      const savedUser = localStorage.getItem("cloudshare_user");
       if (savedUser) {
         currentUser = savedUser;
         loginScreen.classList.add("hidden");
         app.classList.remove("hidden");
         if (userAvatar) userAvatar.textContent = currentUser[0].toUpperCase();
         if (userNameSpan) userNameSpan.textContent = currentUser;
-        loadFilesFromStorage();
+        await loadFilesFromCloud();
+        syncInterval = setInterval(loadFilesFromCloud, 5000);
       }
     }
     
@@ -960,7 +1016,7 @@
     // Initialize
     checkSavedUser();
     
-    console.log("CloudShare siap digunakan!");
+    console.log("CloudShare dengan Supabase siap!");
   </script>
 </body>
   </html>
