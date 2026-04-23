@@ -20,7 +20,6 @@
     
     .hidden { display: none !important; }
     
-    /* Login Screen */
     .login-screen {
       min-height: 100vh;
       display: flex;
@@ -102,7 +101,6 @@
       margin-top: 20px;
     }
     
-    /* Header */
     .header {
       background: #0d0d18;
       border-bottom: 1px solid #1a1a2a;
@@ -166,14 +164,12 @@
       font-size: 13px;
     }
     
-    /* Main Content */
     .main-content {
       max-width: 700px;
       margin: 0 auto;
       padding: 20px;
     }
     
-    /* Stats */
     .stats-grid {
       display: flex;
       gap: 12px;
@@ -205,7 +201,6 @@
       color: #aaa;
     }
     
-    /* Upload Zone */
     .drop-zone {
       border: 2px dashed #2a2a3a;
       border-radius: 20px;
@@ -236,7 +231,6 @@
       color: #aaa;
     }
     
-    /* Search */
     .search-wrap {
       display: flex;
       align-items: center;
@@ -273,7 +267,6 @@
       cursor: pointer;
     }
     
-    /* File List */
     .file-list {
       display: flex;
       flex-direction: column;
@@ -349,7 +342,6 @@
       color: #ff4466;
     }
     
-    /* Empty State */
     .empty-state {
       text-align: center;
       padding: 50px 20px;
@@ -366,7 +358,6 @@
       margin-bottom: 6px;
     }
     
-    /* Toast */
     .toast {
       position: fixed;
       bottom: 20px;
@@ -480,7 +471,6 @@
     </header>
 
     <main class="main-content">
-      <!-- Stats -->
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-icon">📁</div>
@@ -499,12 +489,10 @@
         </div>
       </div>
 
-      <!-- Connection Status -->
       <div id="connection-status" class="connection-status">
         <span id="status-text">🔄 Menghubungkan ke cloud...</span>
       </div>
 
-      <!-- Upload Zone -->
       <div id="drop-zone" class="drop-zone">
         <div id="upload-idle">
           <div class="upload-icon">📤</div>
@@ -521,17 +509,14 @@
       </div>
       <input id="file-input" type="file" multiple style="display: none;">
 
-      <!-- Search -->
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
         <input id="search-input" type="text" placeholder="Cari file atau nama user..." class="search-input">
         <button id="search-clear" class="search-clear hidden">✕</button>
       </div>
 
-      <!-- File List -->
       <div id="file-list" class="file-list"></div>
 
-      <!-- Empty State -->
       <div id="empty-state" class="empty-state hidden">
         <div class="empty-icon">📭</div>
         <p class="empty-title">Belum ada file</p>
@@ -542,481 +527,472 @@
     </main>
   </div>
 
-  <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
   <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script>
-    // ========== KONFIGURASI SUPABASE ==========
-    // GANTI DENGAN CREDENTIAL ANDA!
-    const SUPABASE_URL = "https://ccivfvgxpzcjlpoozrwf.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjaXZmdmd4cHpjamxwb296cndmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MTI3NTAsImV4cCI6MjA5MjQ4ODc1MH0.aSFzrn9dCLlstV2RqrS3DkEBjIYVbe71y4G90DT5RUU";  // <-- GANTI INI!
-    
-    // Inisialisasi Supabase
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    
-    let currentUser = "";
-    let allFiles = [];
-    let syncInterval = null;
-    
-    // DOM Elements
-    const loginScreen = document.getElementById("login-screen");
-    const loginInput = document.getElementById("login-input");
-    const loginBtn = document.getElementById("login-btn");
-    const app = document.getElementById("app");
-    const userAvatar = document.getElementById("user-avatar");
-    const userNameSpan = document.getElementById("user-name");
-    const logoutBtn = document.getElementById("logout-btn");
-    const statTotal = document.getElementById("stat-total");
-    const statSize = document.getElementById("stat-size");
-    const statUsers = document.getElementById("stat-users");
-    const dropZone = document.getElementById("drop-zone");
-    const uploadIdle = document.getElementById("upload-idle");
-    const uploadProgress = document.getElementById("upload-progress");
-    const uploadLabel = document.getElementById("upload-label");
-    const progressBar = document.getElementById("progress-bar");
-    const fileInput = document.getElementById("file-input");
-    const searchInput = document.getElementById("search-input");
-    const searchClear = document.getElementById("search-clear");
-    const fileList = document.getElementById("file-list");
-    const emptyState = document.getElementById("empty-state");
-    const toast = document.getElementById("toast");
-    const statusText = document.getElementById("status-text");
-    
-    // Helper Functions
-    function showToast(msg, isError = false) {
-      if (!toast) return;
-      toast.textContent = (isError ? "❌ " : "✅ ") + msg;
-      toast.className = "toast" + (isError ? " error" : "");
-      toast.classList.remove("hidden");
-      setTimeout(() => toast.classList.add("hidden"), 3000);
-    }
-    
-    function formatSize(bytes) {
-      if (!bytes || bytes < 1024) return (bytes || 0) + " B";
-      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-    }
-    
-    function formatDate(iso) {
-      try {
-        const d = new Date(iso);
-        return d.toLocaleDateString("id-ID", {
-          day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
-        });
-      } catch {
-        return "Baru saja";
+    (function() {
+      // ========== KONFIGURASI SUPABASE ==========
+      // GANTI DENGAN CREDENTIAL ANDA!
+      const SUPABASE_URL = "https://ccivfvgxpzcjlpoozrwf.supabase.co";
+      const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjaXZmdmd4cHpjamxwb296cndmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MTI3NTAsImV4cCI6MjA5MjQ4ODc1MH0.aSFzrn9dCLlstV2RqrS3DkEBjIYVbe71y4G90DT5RUU";  // <-- GANTI INI!
+      
+      // Inisialisasi Supabase - PASTIKAN HANYA SEKALI
+      const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      
+      let currentUser = "";
+      let allFiles = [];
+      let syncInterval = null;
+      
+      // DOM Elements
+      const loginScreen = document.getElementById("login-screen");
+      const loginInput = document.getElementById("login-input");
+      const loginBtn = document.getElementById("login-btn");
+      const app = document.getElementById("app");
+      const userAvatar = document.getElementById("user-avatar");
+      const userNameSpan = document.getElementById("user-name");
+      const logoutBtn = document.getElementById("logout-btn");
+      const statTotal = document.getElementById("stat-total");
+      const statSize = document.getElementById("stat-size");
+      const statUsers = document.getElementById("stat-users");
+      const dropZone = document.getElementById("drop-zone");
+      const uploadIdle = document.getElementById("upload-idle");
+      const uploadProgress = document.getElementById("upload-progress");
+      const uploadLabel = document.getElementById("upload-label");
+      const progressBar = document.getElementById("progress-bar");
+      const fileInput = document.getElementById("file-input");
+      const searchInput = document.getElementById("search-input");
+      const searchClear = document.getElementById("search-clear");
+      const fileList = document.getElementById("file-list");
+      const emptyState = document.getElementById("empty-state");
+      const toast = document.getElementById("toast");
+      const statusText = document.getElementById("status-text");
+      
+      // Helper Functions
+      function showToast(msg, isError = false) {
+        if (!toast) return;
+        toast.textContent = (isError ? "❌ " : "✅ ") + msg;
+        toast.className = "toast" + (isError ? " error" : "");
+        toast.classList.remove("hidden");
+        setTimeout(() => toast.classList.add("hidden"), 3000);
       }
-    }
-    
-    function getFileIcon(type) {
-      if (type && type.startsWith("image/")) return "🖼️";
-      if (type && type.startsWith("video/")) return "🎬";
-      if (type && type.startsWith("audio/")) return "🎵";
-      if (type && type.includes("pdf")) return "📄";
-      if (type && type.includes("zip")) return "🗜️";
-      if (type && type.includes("text")) return "📝";
-      return "📁";
-    }
-    
-    function escapeHtml(str) {
-      if (!str) return "";
-      return str.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-      });
-    }
-    
-    function updateConnectionStatus(text, isError = false) {
-      if (statusText) {
-        statusText.innerHTML = text;
-        const container = document.getElementById("connection-status");
-        if (container) {
-          if (isError) {
-            container.style.background = "#ff446622";
-            container.style.border = "1px solid #ff4466";
-          } else {
-            container.style.background = "#6c63ff22";
-            container.style.border = "1px solid #6c63ff44";
+      
+      function formatSize(bytes) {
+        if (!bytes || bytes < 1024) return (bytes || 0) + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+      }
+      
+      function formatDate(iso) {
+        try {
+          const d = new Date(iso);
+          return d.toLocaleDateString("id-ID", {
+            day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
+          });
+        } catch {
+          return "Baru saja";
+        }
+      }
+      
+      function getFileIcon(type) {
+        if (type && type.startsWith("image/")) return "🖼️";
+        if (type && type.startsWith("video/")) return "🎬";
+        if (type && type.startsWith("audio/")) return "🎵";
+        if (type && type.includes("pdf")) return "📄";
+        if (type && type.includes("zip")) return "🗜️";
+        if (type && type.includes("text")) return "📝";
+        return "📁";
+      }
+      
+      function escapeHtml(str) {
+        if (!str) return "";
+        return str.replace(/[&<>]/g, function(m) {
+          if (m === '&') return '&amp;';
+          if (m === '<') return '&lt;';
+          if (m === '>') return '&gt;';
+          return m;
+        });
+      }
+      
+      function updateConnectionStatus(text, isError = false) {
+        if (statusText) {
+          statusText.innerHTML = text;
+          const container = document.getElementById("connection-status");
+          if (container) {
+            if (isError) {
+              container.style.background = "#ff446622";
+              container.style.border = "1px solid #ff4466";
+            } else {
+              container.style.background = "#6c63ff22";
+              container.style.border = "1px solid #6c63ff44";
+            }
           }
         }
       }
-    }
-    
-    // Load files from Supabase
-    async function loadFilesFromCloud() {
-      try {
-        updateConnectionStatus("🔄 Mengambil data dari cloud...");
-        
-        const { data, error } = await supabase
-          .from('files')
-          .select('*')
-          .order('uploaded_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        allFiles = data || [];
-        renderFiles();
-        updateStats();
-        
-        updateConnectionStatus(`✅ Terhubung — ${allFiles.length} file di cloud`);
-        return true;
-      } catch (error) {
-        console.error("Gagal load files:", error);
-        updateConnectionStatus("⚠️ Gagal koneksi ke cloud - pastikan anon key benar", true);
-        showToast("Gagal mengambil data dari cloud!", true);
-        return false;
-      }
-    }
-    
-    // Upload file to Supabase
-    async function uploadFileToCloud(file) {
-      try {
-        const dataUrl = await readAsDataURL(file);
-        
-        const fileData = {
-          id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          name: file.name,
-          size: file.size,
-          type: file.type || "application/octet-stream",
-          uploaded_by: currentUser,
-          uploaded_at: new Date().toISOString(),
-          data_url: dataUrl
-        };
-        
-        const { error } = await supabase
-          .from('files')
-          .insert([fileData]);
-        
-        if (error) throw error;
-        
-        await loadFilesFromCloud();
-        return true;
-      } catch (error) {
-        console.error("Upload error:", error);
-        showToast(`Gagal upload ${file.name}: ${error.message}`, true);
-        return false;
-      }
-    }
-    
-    // Delete file from Supabase
-    async function deleteFileFromCloud(fileId) {
-      try {
-        const { error } = await supabase
-          .from('files')
-          .delete()
-          .eq('id', fileId);
-        
-        if (error) throw error;
-        
-        await loadFilesFromCloud();
-        return true;
-      } catch (error) {
-        console.error("Delete error:", error);
-        showToast("Gagal menghapus file!", true);
-        return false;
-      }
-    }
-    
-    function readAsDataURL(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result);
-        reader.onerror = () => reject(new Error("Gagal membaca file"));
-        reader.readAsDataURL(file);
-      });
-    }
-    
-    // Update Stats
-    function updateStats() {
-      if (statTotal) statTotal.textContent = allFiles.length;
-      if (statSize) statSize.textContent = formatSize(allFiles.reduce((a, f) => a + (f.size || 0), 0));
-      if (statUsers) {
-        const uniqueUsers = new Set(allFiles.map(f => f.uploaded_by).filter(Boolean));
-        statUsers.textContent = uniqueUsers.size;
-      }
-    }
-    
-    // Render File List
-    function renderFiles() {
-      if (!fileList) return;
       
-      const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
-      const filtered = query ? allFiles.filter(f => 
-        (f.name || "").toLowerCase().includes(query) || 
-        (f.uploaded_by || "").toLowerCase().includes(query)
-      ) : allFiles;
-      
-      fileList.innerHTML = "";
-      
-      if (filtered.length === 0) {
-        if (emptyState) emptyState.classList.remove("hidden");
-        return;
-      }
-      
-      if (emptyState) emptyState.classList.add("hidden");
-      
-      filtered.forEach(file => {
-        const card = document.createElement("div");
-        card.className = "file-card";
-        
-        // Thumbnail
-        const thumb = document.createElement("div");
-        thumb.className = "file-thumb";
-        if (file.type && file.type.startsWith("image/") && file.data_url) {
-          const img = document.createElement("img");
-          img.src = file.data_url;
-          thumb.appendChild(img);
-        } else {
-          thumb.textContent = getFileIcon(file.type);
-        }
-        
-        // Info
-        const info = document.createElement("div");
-        info.className = "file-info";
-        info.innerHTML = `
-          <div class="file-name">${escapeHtml(file.name)}</div>
-          <div class="file-meta">
-            <span class="uploader">${escapeHtml(file.uploaded_by)}</span>
-            &nbsp;·&nbsp;${formatSize(file.size)}&nbsp;·&nbsp;${formatDate(file.uploaded_at)}
-          </div>
-        `;
-        
-        // Actions
-        const actions = document.createElement("div");
-        actions.className = "file-actions";
-        
-        // Preview for images
-        if (file.type && file.type.startsWith("image/") && file.data_url) {
-          const previewBtn = document.createElement("button");
-          previewBtn.className = "action-btn";
-          previewBtn.textContent = "👁️";
-          previewBtn.onclick = () => openPreview(file.data_url, file.name);
-          actions.appendChild(previewBtn);
-        }
-        
-        // Download button
-        const dlBtn = document.createElement("button");
-        dlBtn.className = "action-btn";
-        dlBtn.textContent = "⬇️";
-        dlBtn.onclick = () => downloadFile(file);
-        actions.appendChild(dlBtn);
-        
-        // Delete button (only for uploader)
-        if (file.uploaded_by === currentUser) {
-          const delBtn = document.createElement("button");
-          delBtn.className = "action-btn danger";
-          delBtn.textContent = "🗑️";
-          delBtn.onclick = () => {
-            if (confirm("Hapus file ini?")) {
-              deleteFileFromCloud(file.id);
-            }
-          };
-          actions.appendChild(delBtn);
-        }
-        
-        card.appendChild(thumb);
-        card.appendChild(info);
-        card.appendChild(actions);
-        fileList.appendChild(card);
-      });
-    }
-    
-    function openPreview(dataUrl, name) {
-      const modal = document.createElement("div");
-      modal.style.position = "fixed";
-      modal.style.top = "0";
-      modal.style.left = "0";
-      modal.style.right = "0";
-      modal.style.bottom = "0";
-      modal.style.background = "rgba(0,0,0,0.95)";
-      modal.style.zIndex = "10000";
-      modal.style.display = "flex";
-      modal.style.alignItems = "center";
-      modal.style.justifyContent = "center";
-      modal.style.flexDirection = "column";
-      modal.style.padding = "20px";
-      
-      const img = document.createElement("img");
-      img.src = dataUrl;
-      img.style.maxWidth = "95%";
-      img.style.maxHeight = "80%";
-      img.style.borderRadius = "12px";
-      
-      const closeBtn = document.createElement("button");
-      closeBtn.textContent = "✕ Tutup";
-      closeBtn.style.marginTop = "20px";
-      closeBtn.style.padding = "10px 20px";
-      closeBtn.style.background = "#6c63ff";
-      closeBtn.style.border = "none";
-      closeBtn.style.borderRadius = "10px";
-      closeBtn.style.color = "white";
-      closeBtn.style.fontSize = "14px";
-      closeBtn.style.cursor = "pointer";
-      closeBtn.onclick = () => modal.remove();
-      
-      modal.appendChild(img);
-      modal.appendChild(closeBtn);
-      document.body.appendChild(modal);
-    }
-    
-    function downloadFile(file) {
-      if (!file.data_url) {
-        showToast("File tidak tersedia", true);
-        return;
-      }
-      const a = document.createElement("a");
-      a.href = file.data_url;
-      a.download = file.name;
-      a.click();
-      showToast(`Mengunduh ${file.name}`);
-    }
-    
-    // Upload Handler
-    async function handleUpload(files) {
-      if (!files || files.length === 0) return;
-      
-      const fileArray = Array.from(files);
-      
-      // Filter file terlalu besar (max 5MB untuk database)
-      const validFiles = fileArray.filter(f => {
-        if (f.size > 5 * 1024 * 1024) {
-          showToast(`${f.name} terlalu besar (max 5MB)`, true);
+      // Load files from Supabase
+      async function loadFilesFromCloud() {
+        try {
+          updateConnectionStatus("🔄 Mengambil data dari cloud...");
+          
+          const { data, error } = await supabaseClient
+            .from('files')
+            .select('*')
+            .order('uploaded_at', { ascending: false });
+          
+          if (error) throw error;
+          
+          allFiles = data || [];
+          renderFiles();
+          updateStats();
+          
+          updateConnectionStatus(`✅ Terhubung — ${allFiles.length} file di cloud`);
+          return true;
+        } catch (error) {
+          console.error("Gagal load files:", error);
+          updateConnectionStatus("⚠️ Gagal koneksi ke cloud - pastikan anon key benar", true);
+          showToast("Gagal mengambil data dari cloud!", true);
           return false;
         }
-        return true;
-      });
+      }
       
-      if (validFiles.length === 0) return;
+      // Upload file to Supabase
+      async function uploadFileToCloud(file) {
+        try {
+          const dataUrl = await readAsDataURL(file);
+          
+          const fileData = {
+            id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: file.name,
+            size: file.size,
+            type: file.type || "application/octet-stream",
+            uploaded_by: currentUser,
+            uploaded_at: new Date().toISOString(),
+            data_url: dataUrl
+          };
+          
+          const { error } = await supabaseClient
+            .from('files')
+            .insert([fileData]);
+          
+          if (error) throw error;
+          
+          await loadFilesFromCloud();
+          return true;
+        } catch (error) {
+          console.error("Upload error:", error);
+          showToast(`Gagal upload ${file.name}: ${error.message}`, true);
+          return false;
+        }
+      }
       
-      // Show progress UI
-      if (uploadIdle) uploadIdle.classList.add("hidden");
-      if (uploadProgress) uploadProgress.classList.remove("hidden");
+      // Delete file from Supabase
+      async function deleteFileFromCloud(fileId) {
+        try {
+          const { error } = await supabaseClient
+            .from('files')
+            .delete()
+            .eq('id', fileId);
+          
+          if (error) throw error;
+          
+          await loadFilesFromCloud();
+          return true;
+        } catch (error) {
+          console.error("Delete error:", error);
+          showToast("Gagal menghapus file!", true);
+          return false;
+        }
+      }
       
-      let successCount = 0;
-      for (let i = 0; i < validFiles.length; i++) {
-        const file = validFiles[i];
-        const pct = Math.round(((i + 1) / validFiles.length) * 100);
-        if (uploadLabel) uploadLabel.textContent = `Mengupload ${file.name}... ${pct}%`;
-        if (progressBar) progressBar.style.width = pct + "%";
+      function readAsDataURL(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = e => resolve(e.target.result);
+          reader.onerror = () => reject(new Error("Gagal membaca file"));
+          reader.readAsDataURL(file);
+        });
+      }
+      
+      // Update Stats
+      function updateStats() {
+        if (statTotal) statTotal.textContent = allFiles.length;
+        if (statSize) statSize.textContent = formatSize(allFiles.reduce((a, f) => a + (f.size || 0), 0));
+        if (statUsers) {
+          const uniqueUsers = new Set(allFiles.map(f => f.uploaded_by).filter(Boolean));
+          statUsers.textContent = uniqueUsers.size;
+        }
+      }
+      
+      // Render File List
+      function renderFiles() {
+        if (!fileList) return;
         
-        const success = await uploadFileToCloud(file);
-        if (success) successCount++;
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+        const filtered = query ? allFiles.filter(f => 
+          (f.name || "").toLowerCase().includes(query) || 
+          (f.uploaded_by || "").toLowerCase().includes(query)
+        ) : allFiles;
+        
+        fileList.innerHTML = "";
+        
+        if (filtered.length === 0) {
+          if (emptyState) emptyState.classList.remove("hidden");
+          return;
+        }
+        
+        if (emptyState) emptyState.classList.add("hidden");
+        
+        filtered.forEach(file => {
+          const card = document.createElement("div");
+          card.className = "file-card";
+          
+          const thumb = document.createElement("div");
+          thumb.className = "file-thumb";
+          if (file.type && file.type.startsWith("image/") && file.data_url) {
+            const img = document.createElement("img");
+            img.src = file.data_url;
+            thumb.appendChild(img);
+          } else {
+            thumb.textContent = getFileIcon(file.type);
+          }
+          
+          const info = document.createElement("div");
+          info.className = "file-info";
+          info.innerHTML = `
+            <div class="file-name">${escapeHtml(file.name)}</div>
+            <div class="file-meta">
+              <span class="uploader">${escapeHtml(file.uploaded_by)}</span>
+              &nbsp;·&nbsp;${formatSize(file.size)}&nbsp;·&nbsp;${formatDate(file.uploaded_at)}
+            </div>
+          `;
+          
+          const actions = document.createElement("div");
+          actions.className = "file-actions";
+          
+          if (file.type && file.type.startsWith("image/") && file.data_url) {
+            const previewBtn = document.createElement("button");
+            previewBtn.className = "action-btn";
+            previewBtn.textContent = "👁️";
+            previewBtn.onclick = () => openPreview(file.data_url, file.name);
+            actions.appendChild(previewBtn);
+          }
+          
+          const dlBtn = document.createElement("button");
+          dlBtn.className = "action-btn";
+          dlBtn.textContent = "⬇️";
+          dlBtn.onclick = () => downloadFile(file);
+          actions.appendChild(dlBtn);
+          
+          if (file.uploaded_by === currentUser) {
+            const delBtn = document.createElement("button");
+            delBtn.className = "action-btn danger";
+            delBtn.textContent = "🗑️";
+            delBtn.onclick = () => {
+              if (confirm("Hapus file ini?")) {
+                deleteFileFromCloud(file.id);
+              }
+            };
+            actions.appendChild(delBtn);
+          }
+          
+          card.appendChild(thumb);
+          card.appendChild(info);
+          card.appendChild(actions);
+          fileList.appendChild(card);
+        });
       }
       
-      // Hide progress UI
-      if (uploadIdle) uploadIdle.classList.remove("hidden");
-      if (uploadProgress) uploadProgress.classList.add("hidden");
-      if (progressBar) progressBar.style.width = "0%";
-      
-      if (successCount > 0) {
-        showToast(`${successCount} file berhasil diupload ke cloud!`);
+      function openPreview(dataUrl, name) {
+        const modal = document.createElement("div");
+        modal.style.position = "fixed";
+        modal.style.top = "0";
+        modal.style.left = "0";
+        modal.style.right = "0";
+        modal.style.bottom = "0";
+        modal.style.background = "rgba(0,0,0,0.95)";
+        modal.style.zIndex = "10000";
+        modal.style.display = "flex";
+        modal.style.alignItems = "center";
+        modal.style.justifyContent = "center";
+        modal.style.flexDirection = "column";
+        modal.style.padding = "20px";
+        
+        const img = document.createElement("img");
+        img.src = dataUrl;
+        img.style.maxWidth = "95%";
+        img.style.maxHeight = "80%";
+        img.style.borderRadius = "12px";
+        
+        const closeBtn = document.createElement("button");
+        closeBtn.textContent = "✕ Tutup";
+        closeBtn.style.marginTop = "20px";
+        closeBtn.style.padding = "10px 20px";
+        closeBtn.style.background = "#6c63ff";
+        closeBtn.style.border = "none";
+        closeBtn.style.borderRadius = "10px";
+        closeBtn.style.color = "white";
+        closeBtn.style.fontSize = "14px";
+        closeBtn.style.cursor = "pointer";
+        closeBtn.onclick = () => modal.remove();
+        
+        modal.appendChild(img);
+        modal.appendChild(closeBtn);
+        document.body.appendChild(modal);
       }
       
-      if (fileInput) fileInput.value = "";
-    }
-    
-    // Login
-    async function login() {
-      const name = loginInput.value.trim();
-      if (!name) {
-        showToast("Masukkan nama dulu!", true);
-        return;
+      function downloadFile(file) {
+        if (!file.data_url) {
+          showToast("File tidak tersedia", true);
+          return;
+        }
+        const a = document.createElement("a");
+        a.href = file.data_url;
+        a.download = file.name;
+        a.click();
+        showToast(`Mengunduh ${file.name}`);
       }
       
-      currentUser = name;
-      localStorage.setItem("cloudshare_user", currentUser);
-      
-      loginScreen.classList.add("hidden");
-      app.classList.remove("hidden");
-      
-      if (userAvatar) userAvatar.textContent = name[0].toUpperCase();
-      if (userNameSpan) userNameSpan.textContent = name;
-      
-      await loadFilesFromCloud();
-      
-      // Auto sync every 5 seconds
-      if (syncInterval) clearInterval(syncInterval);
-      syncInterval = setInterval(loadFilesFromCloud, 5000);
-    }
-    
-    // Logout
-    function logout() {
-      if (syncInterval) {
-        clearInterval(syncInterval);
-        syncInterval = null;
+      // Upload Handler
+      async function handleUpload(files) {
+        if (!files || files.length === 0) return;
+        
+        const fileArray = Array.from(files);
+        
+        const validFiles = fileArray.filter(f => {
+          if (f.size > 5 * 1024 * 1024) {
+            showToast(`${f.name} terlalu besar (max 5MB)`, true);
+            return false;
+          }
+          return true;
+        });
+        
+        if (validFiles.length === 0) return;
+        
+        if (uploadIdle) uploadIdle.classList.add("hidden");
+        if (uploadProgress) uploadProgress.classList.remove("hidden");
+        
+        let successCount = 0;
+        for (let i = 0; i < validFiles.length; i++) {
+          const file = validFiles[i];
+          const pct = Math.round(((i + 1) / validFiles.length) * 100);
+          if (uploadLabel) uploadLabel.textContent = `Mengupload ${file.name}... ${pct}%`;
+          if (progressBar) progressBar.style.width = pct + "%";
+          
+          const success = await uploadFileToCloud(file);
+          if (success) successCount++;
+        }
+        
+        if (uploadIdle) uploadIdle.classList.remove("hidden");
+        if (uploadProgress) uploadProgress.classList.add("hidden");
+        if (progressBar) progressBar.style.width = "0%";
+        
+        if (successCount > 0) {
+          showToast(`${successCount} file berhasil diupload ke cloud!`);
+        }
+        
+        if (fileInput) fileInput.value = "";
       }
-      currentUser = "";
-      localStorage.removeItem("cloudshare_user");
-      app.classList.add("hidden");
-      loginScreen.classList.remove("hidden");
-      if (loginInput) loginInput.value = "";
-    }
-    
-    // Check saved user
-    async function checkSavedUser() {
-      const savedUser = localStorage.getItem("cloudshare_user");
-      if (savedUser) {
-        currentUser = savedUser;
+      
+      // Login
+      async function login() {
+        const name = loginInput.value.trim();
+        if (!name) {
+          showToast("Masukkan nama dulu!", true);
+          return;
+        }
+        
+        currentUser = name;
+        localStorage.setItem("cloudshare_user", currentUser);
+        
         loginScreen.classList.add("hidden");
         app.classList.remove("hidden");
-        if (userAvatar) userAvatar.textContent = currentUser[0].toUpperCase();
-        if (userNameSpan) userNameSpan.textContent = currentUser;
+        
+        if (userAvatar) userAvatar.textContent = name[0].toUpperCase();
+        if (userNameSpan) userNameSpan.textContent = name;
+        
         await loadFilesFromCloud();
+        
+        if (syncInterval) clearInterval(syncInterval);
         syncInterval = setInterval(loadFilesFromCloud, 5000);
       }
-    }
-    
-    // Event Listeners
-    if (loginBtn) {
-      loginBtn.addEventListener("click", login);
-      loginBtn.disabled = false;
-    }
-    
-    if (loginInput) {
-      loginInput.addEventListener("input", () => {
-        if (loginBtn) loginBtn.disabled = !loginInput.value.trim();
-      });
-      loginInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") login();
-      });
-    }
-    
-    if (logoutBtn) logoutBtn.addEventListener("click", logout);
-    
-    if (dropZone) {
-      dropZone.addEventListener("click", () => {
-        if (fileInput) fileInput.click();
-      });
-    }
-    
-    if (fileInput) {
-      fileInput.addEventListener("change", (e) => handleUpload(e.target.files));
-    }
-    
-    if (searchInput) {
-      searchInput.addEventListener("input", () => {
-        if (searchClear) searchClear.classList.toggle("hidden", !searchInput.value);
-        renderFiles();
-      });
-    }
-    
-    if (searchClear) {
-      searchClear.addEventListener("click", () => {
-        if (searchInput) searchInput.value = "";
-        if (searchClear) searchClear.classList.add("hidden");
-        renderFiles();
-      });
-    }
-    
-    // Initialize
-    checkSavedUser();
-    
-    console.log("CloudShare dengan Supabase siap!");
+      
+      // Logout
+      function logout() {
+        if (syncInterval) {
+          clearInterval(syncInterval);
+          syncInterval = null;
+        }
+        currentUser = "";
+        localStorage.removeItem("cloudshare_user");
+        app.classList.add("hidden");
+        loginScreen.classList.remove("hidden");
+        if (loginInput) loginInput.value = "";
+      }
+      
+      // Check saved user
+      async function checkSavedUser() {
+        const savedUser = localStorage.getItem("cloudshare_user");
+        if (savedUser) {
+          currentUser = savedUser;
+          loginScreen.classList.add("hidden");
+          app.classList.remove("hidden");
+          if (userAvatar) userAvatar.textContent = currentUser[0].toUpperCase();
+          if (userNameSpan) userNameSpan.textContent = currentUser;
+          await loadFilesFromCloud();
+          syncInterval = setInterval(loadFilesFromCloud, 5000);
+        }
+      }
+      
+      // Event Listeners
+      if (loginBtn) {
+        loginBtn.addEventListener("click", login);
+        loginBtn.disabled = false;
+      }
+      
+      if (loginInput) {
+        loginInput.addEventListener("input", () => {
+          if (loginBtn) loginBtn.disabled = !loginInput.value.trim();
+        });
+        loginInput.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") login();
+        });
+      }
+      
+      if (logoutBtn) logoutBtn.addEventListener("click", logout);
+      
+      if (dropZone) {
+        dropZone.addEventListener("click", () => {
+          if (fileInput) fileInput.click();
+        });
+      }
+      
+      if (fileInput) {
+        fileInput.addEventListener("change", (e) => handleUpload(e.target.files));
+      }
+      
+      if (searchInput) {
+        searchInput.addEventListener("input", () => {
+          if (searchClear) searchClear.classList.toggle("hidden", !searchInput.value);
+          renderFiles();
+        });
+      }
+      
+      if (searchClear) {
+        searchClear.addEventListener("click", () => {
+          if (searchInput) searchInput.value = "";
+          if (searchClear) searchClear.classList.add("hidden");
+          renderFiles();
+        });
+      }
+      
+      // Initialize
+      checkSavedUser();
+      
+      console.log("CloudShare dengan Supabase siap!");
+    })();
   </script>
 </body>
   </html>
