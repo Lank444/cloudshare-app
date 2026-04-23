@@ -453,12 +453,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     (function() {
-      // ========== KONFIGURASI SUPABASE (SUDAH DIISI) ==========
+      // ========== KONFIGURASI SUPABASE ==========
       const SUPABASE_URL = "https://ecjlzqwhbwkgmvergwhi.supabase.co";
       const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjamx6cXdoYndrZ212ZXJnd2hpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MTI1OTUsImV4cCI6MjA5MjQ4ODU5NX0.9hou3u4m4lZSQo0S_0pOzz13uYxvik-D9lG4rzwLatI";
-      
-      console.log("Supabase URL:", SUPABASE_URL);
-      console.log("Supabase Key length:", SUPABASE_KEY.length);
       
       const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
       
@@ -544,10 +541,7 @@
             .select('*')
             .order('uploaded_at', { ascending: false });
           
-          if (error) {
-            console.error("Supabase error:", error);
-            throw error;
-          }
+          if (error) throw error;
           
           allFiles = data || [];
           renderFiles();
@@ -556,9 +550,8 @@
           return true;
         } catch (error) {
           console.error("Gagal load files:", error);
-          let errorMsg = error.message || "Unknown error";
-          updateConnectionStatus(`⚠️ ${errorMsg}`, true);
-          showToast("Gagal mengambil data dari cloud! Pastikan tabel 'files' sudah dibuat.", true);
+          updateConnectionStatus(`⚠️ ${error.message || "Gagal koneksi"}`, true);
+          showToast("Gagal mengambil data dari cloud!", true);
           return false;
         }
       }
